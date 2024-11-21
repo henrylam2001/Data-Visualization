@@ -40,8 +40,10 @@ library(magrittr)
 
 ```{r}
 #convert time into numeric format
-IPS_convertedtime <- IPS_sampledata %>% mutate(time = as.numeric(as.character(time)))
-IPS_convertedtime
+library(magrittr)
+IPS_data_change_class <- IPS_sampledata %>%
+  mutate(across(c(time, posX, posY, posZ, orientation, signal, channel, type), ~ suppressWarnings(as.numeric(.))))
+IPS_data_change_class
 ```
 
 ## Variable dictionary
@@ -76,7 +78,7 @@ posixct_func<- function(x){
   date_time<-as.POSIXct(seconds, origin = "1970-01-01", tz = "GMT")
 }
 # Creates a new data frame with with time converted into posixct format
-IPS_data_change_time<-IPS_convertedtime %>% mutate(time = posixct_func(time))
+IPS_data_change_time<-IPS_data_change_class %>% mutate(time = posixct_func(time))
 
 IPS_data_change_time
 ```
