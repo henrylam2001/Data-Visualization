@@ -40,14 +40,6 @@ library(dplyr)
 library(magrittr)
 ```
 
-```{r}
-#convert time into numeric format
-library(magrittr)
-IPS_data_change_class <- IPS_sampledata %>%
-  mutate(across(c(time, posX, posY, posZ, orientation, signal, channel, type), ~ suppressWarnings(as.numeric(.))))
-IPS_data_change_class
-```
-
 ## Variable dictionary
 
 - `time`: timestamp in milliseconds since midnight 01/01/1970 UTC
@@ -73,7 +65,9 @@ For this part of the lab you may use some of the code from the previous two labs
 1. Transform the variables in the data set into their correct types.
 
 ```{r transform_vars}
-# your code here
+# transform variables into correct types
+IPS_data_change_class <- IPS_sampledata %>%
+  mutate(across(c(time, posX, posY, posZ, orientation, signal, channel, type), ~ suppressWarnings(as.numeric(.))))
 # Creates a function to convert the observations in the time variable from milliseconds to into the POSIXct time format 
 posixct_func<- function(x){  
   seconds<- x %/% 1000
@@ -100,8 +94,23 @@ IPS_join
 
 ```{r bin_orientation}
 # your code here
+# Identifies all unique orientation observations (to get a sense of what the values are)
+unique(IPS_join$orientation)
 
-
+# Recodes the data in orientation to conform to specific values, aka 0,45,90,135,180,225,270,315
+IPS_ori <- IPS_join %>%
+  mutate(rec_orient = case_when(
+    orientation <= 45/2 ~ 0,
+    orientation <= 135/2 ~ 45,
+    orientation <= 225/2 ~ 90,
+    orientation <= 315/2 ~ 135,
+    orientation <= 405/2 ~ 180,
+    orientation <= 495/2 ~ 225,
+    orientation <= 585/2 ~ 270,
+    orientation <= 675/2 ~ 315,
+    orientation == 360 ~ 0
+  )) 
+IPS_ori
 ```
 
 
