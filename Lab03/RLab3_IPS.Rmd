@@ -28,7 +28,9 @@ First, let's load up the data set.
 load("IPS_portion.RData")
 write.csv(IPS_sampledata,"IPS_sampledata")
 mac_locs <- readr::read_table("accessPointLocations.txt")
-
+```
+```{r}
+mac_locs
 ```
 
 ```{r}
@@ -82,15 +84,16 @@ IPS_data_change_time<-IPS_data_change_class %>% mutate(time = posixct_func(time)
 
 IPS_data_change_time
 ```
-```
 
 
 2. From `IPS_sampledata`, keep only records for the six access points included in the `mac_locs` table, save these to `IPS_sampledata`.
 
 ```{r filter_by_macs}
-# your code here
-
-
+# remane the Macs column to match the data set
+colnames(mac_locs)[colnames(mac_locs) == "Macs"] <- "mac"
+# use inner join to find the matched data
+IPS_join <- IPS_data_change_time %>% inner_join(mac_locs, by = c("mac"))
+IPS_join
 ```
 
 3. Create a grouped version of the `orientation` variable, with groups (bins) determined by the proximity to angles 0, 45, 90, 135, 180, 225, 270, 315.
