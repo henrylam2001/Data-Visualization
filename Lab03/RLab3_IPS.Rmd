@@ -29,9 +29,6 @@ load("IPS_portion.RData")
 write.csv(IPS_sampledata,"IPS_sampledata")
 mac_locs <- readr::read_table("accessPointLocations.txt")
 ```
-```{r}
-mac_locs
-```
 
 ```{r}
 #install packages
@@ -66,7 +63,7 @@ For this part of the lab you may use some of the code from the previous two labs
 
 ```{r transform_vars}
 # transform variables into correct types
-IPS_data_change_class <- IPS_sampledata %>%
+IPS_sampledata <- IPS_sampledata %>%
   mutate(across(c(time, posX, posY, posZ, orientation, signal, channel, type), ~ suppressWarnings(as.numeric(.))))
 # Creates a function to convert the observations in the time variable from milliseconds to into the POSIXct time format 
 posixct_func<- function(x){  
@@ -74,20 +71,20 @@ posixct_func<- function(x){
   date_time<-as.POSIXct(seconds, origin = "1970-01-01", tz = "GMT")
 }
 # Creates a new data frame with with time converted into posixct format
-IPS_data_change_time<-IPS_data_change_class %>% mutate(time = posixct_func(time))
+IPS_sampledata <-IPS_sampledata %>% mutate(time = posixct_func(time))
 
-IPS_data_change_time
+IPS_sampledata
 ```
 
 
 2. From `IPS_sampledata`, keep only records for the six access points included in the `mac_locs` table, save these to `IPS_sampledata`.
 
 ```{r filter_by_macs}
-# remane the Macs column to match the data set
-colnames(mac_locs)[colnames(mac_locs) == "Macs"] <- "mac"
-# use inner join to find the matched data
-IPS_join <- IPS_data_change_time %>% inner_join(mac_locs, by = c("mac"))
-IPS_join
+#create a new variable to filter the six access points
+MAC_addresses<-c("00:0f:a3:39:e1:c0", "00:14:bf:b1:97:8a", "00:14:bf:3b:c7:c6", "00:14:bf:b1:97:90", "00:14:bf:b1:97:8d", "00:14:bf:b1:97:81")
+#apply the filter to keep only the six access points as required
+IPS_sampledata <- IPS_sampledata %>% filter(mac %in% MAC_addresses)
+IPS_sampledata
 ```
 
 3. Create a grouped version of the `orientation` variable, with groups (bins) determined by the proximity to angles 0, 45, 90, 135, 180, 225, 270, 315.
@@ -95,10 +92,10 @@ IPS_join
 ```{r bin_orientation}
 # your code here
 # Identifies all unique orientation observations (to get a sense of what the values are)
-unique(IPS_join$orientation)
+unique(IPS_sampledata$orientation)
 
-# Recodes the data in orientation to conform to specific values, aka 0,45,90,135,180,225,270,315
-IPS_ori <- IPS_join %>%
+# Recodes the data in orientation to conform to specific values: 0,45,90,135,180,225,270,315
+IPS_sampledata <- IPS_sampledata %>%
   mutate(rec_orient = case_when(
     orientation <= 45/2 ~ 0,
     orientation <= 135/2 ~ 45,
@@ -110,16 +107,18 @@ IPS_ori <- IPS_join %>%
     orientation <= 675/2 ~ 315,
     orientation == 360 ~ 0
   )) 
-IPS_ori
+IPS_sampledata
 ```
 
 
 4. Combine the information in `IPS_sampledata` and `mac_locs` using one of the `join_` functions we learned in class.
 
 ```{r mac_joins}
-# your code here
-
-
+# remane the Macs column to match the data set
+colnames(mac_locs)[colnames(mac_locs) == "Macs"] <- "mac"
+# use inner join to find the matched data
+IPS_sampledata <- IPS_sampledata %>% inner_join(mac_locs, by = c("mac"))
+IPS_sampledata
 ```
 
 
