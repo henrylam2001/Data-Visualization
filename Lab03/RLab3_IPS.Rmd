@@ -26,7 +26,22 @@ First, let's load up the data set.
 ```{r eval=TRUE, echo=TRUE, message=FALSE}
 # loads data set IPS_sampledata
 load("IPS_portion.RData")
+write.csv(IPS_sampledata,"IPS_sampledata")
 mac_locs <- readr::read_table("accessPointLocations.txt")
+
+```
+
+```{r}
+#install packages
+install.packages("dplyr")
+library(dplyr)
+library(magrittr)
+```
+
+```{r}
+#convert time into numeric format
+IPS_convertedtime <- IPS_sampledata %>% mutate(time = as.numeric(as.character(time)))
+IPS_convertedtime
 ```
 
 ## Variable dictionary
@@ -55,6 +70,16 @@ For this part of the lab you may use some of the code from the previous two labs
 
 ```{r transform_vars}
 # your code here
+# Creates a function to convert the observations in the time variable from milliseconds to into the POSIXct time format 
+posixct_func<- function(x){  
+  seconds<- x %/% 1000
+  date_time<-as.POSIXct(seconds, origin = "1970-01-01", tz = "GMT")
+}
+# Creates a new data frame with with time converted into posixct format
+IPS_data_change_time<-IPS_convertedtime %>% mutate(time = posixct_func(time))
+
+IPS_data_change_time
+```
 ```
 
 
