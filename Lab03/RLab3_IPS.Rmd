@@ -108,7 +108,7 @@ tail(IPS_sampledata_orientation)
 4. Combine the information in `IPS_sampledata` and `mac_locs` using one of the `join_` functions we learned in class.
 
 ```{r mac_joins}
-# remane the Macs column to match the data set
+# rename the Macs column to match the data set
 colnames(mac_locs)[colnames(mac_locs) == "Macs"] <- "mac"
 # use inner join to find the matched data
 IPS_sampledata_joined <- IPS_sampledata %>% inner_join(mac_locs, by = c("mac"))
@@ -123,9 +123,20 @@ Throughout this section you'll have some freedom to create useful visualizations
 1. Generate a scatter plot showing the locations (`posX` and `posY` in `IPS_Sampledata`) of the handheld device, as well as those from the access points (variables `x` and `y` from `mac_locs`).   Use the `aesthetic` of your choosing to distinguish the handheld device locations from those corresponding to the access points.
 
 ```{r loc_scatter}
-# your code here
+library(ggplot2)
+unique_combinations <- IPS_sampledata  %>% distinct(posX, posY)
 
+combined_cordinates <- bind_rows(
+  unique_combinations %>% rename(X = posX, Y = posY),  
+  mac_locs %>% rename(X = x, Y = y)) %>% select(X,Y)  
+combined_cordinates
 
+combined_cordinates_with_groups <- combined_cordinates %>%
+  mutate(coordinates_of = ifelse(row_number() > 15, "Access_Points", "Locations"))
+
+ggplot(combined_cordinates_with_groups, aes(x = X, y = Y , color = coordinates_of)) +
+  geom_point() +
+  scale_color_manual(values = c("Locations" = "black", "Access_Points" = "red"))
 ```
 
 
