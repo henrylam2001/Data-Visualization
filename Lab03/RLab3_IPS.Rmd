@@ -27,7 +27,6 @@ First, let's load up the data set.
 # loads data set IPS_sampledata
 load("IPS_portion.RData")
 write.csv(IPS_sampledata,"IPS_sampledata")
-mac_locs <- readr::read_table("accessPointLocations.txt")
 ```
 
 ```{r}
@@ -71,43 +70,38 @@ posixct_func<- function(x){
   date_time<-as.POSIXct(seconds, origin = "1970-01-01", tz = "GMT")
 }
 # Creates a new data frame with with time converted into posixct format
-IPS_sampledata <-IPS_sampledata %>% mutate(time = posixct_func(time))
+IPS_sampledata_change_time <-IPS_sampledata %>% mutate(time = posixct_func(time))
 
-IPS_sampledata
+IPS_sampledata_change_time
 ```
 
 
 2. From `IPS_sampledata`, keep only records for the six access points included in the `mac_locs` table, save these to `IPS_sampledata`.
 
 ```{r filter_by_macs}
-#create a new variable to filter the six access points
-MAC_addresses<-c("00:0f:a3:39:e1:c0", "00:14:bf:b1:97:8a", "00:14:bf:3b:c7:c6", "00:14:bf:b1:97:90", "00:14:bf:b1:97:8d", "00:14:bf:b1:97:81")
-#apply the filter to keep only the six access points as required
-IPS_sampledata <- IPS_sampledata %>% filter(mac %in% MAC_addresses)
-IPS_sampledata
+setwd("C:/Users/risin/OneDrive/Desktop/School/Classes/STAT410/Git Repos/Codinglab/Codinglab/Codinglab/Codinglab/Indoor-Positioning-System/Data-Visualization/Data-Visualization/Data-Visualization/Lab03")
+mac_locs <- readr::read_table("accessPointLocations.txt")
+
+MAC_addresses<-c(mac_locs$Macs)
+
+IPS_sampledata_mac <- IPS_sampledata_change_time %>% filter(mac %in% MAC_addresses)
+IPS_sampledata_mac
 ```
 
 3. Create a grouped version of the `orientation` variable, with groups (bins) determined by the proximity to angles 0, 45, 90, 135, 180, 225, 270, 315.
 
 ```{r bin_orientation}
-# your code here
-# Identifies all unique orientation observations (to get a sense of what the values are)
-unique(IPS_sampledata$orientation)
+# This function takes and an angle and locates its closest proximity to angles in the bin vector
+nearest_angle <- function(angle, bins) {
+  bins[which.min(abs(angle %% 360 - bins))]
+}
+bins <- c(0, 45, 90, 135, 180, 225, 270, 315)
 
-# Recodes the data in orientation to conform to specific values: 0,45,90,135,180,225,270,315
-IPS_sampledata <- IPS_sampledata %>%
-  mutate(rec_orient = case_when(
-    orientation <= 45/2 ~ 0,
-    orientation <= 135/2 ~ 45,
-    orientation <= 225/2 ~ 90,
-    orientation <= 315/2 ~ 135,
-    orientation <= 405/2 ~ 180,
-    orientation <= 495/2 ~ 225,
-    orientation <= 585/2 ~ 270,
-    orientation <= 675/2 ~ 315,
-    orientation == 360 ~ 0
-  )) 
-IPS_sampledata
+# Applies the nearest_angle function to the orientation column and creates a group version of the orientation variable conformed to angles 0, 45, 90, 135, 180, 225, 270, 315.
+IPS_sampledata_orientation <- IPS_sampledata_mac %>%
+mutate(rec_orient = sapply(orientation, nearest_angle, bins = bins))
+head(IPS_sampledata_orientation)
+tail(IPS_sampledata_orientation)
 ```
 
 
@@ -117,8 +111,8 @@ IPS_sampledata
 # remane the Macs column to match the data set
 colnames(mac_locs)[colnames(mac_locs) == "Macs"] <- "mac"
 # use inner join to find the matched data
-IPS_sampledata <- IPS_sampledata %>% inner_join(mac_locs, by = c("mac"))
-IPS_sampledata
+IPS_sampledata_joined <- IPS_sampledata %>% inner_join(mac_locs, by = c("mac"))
+IPS_sampledata_joined
 ```
 
 
