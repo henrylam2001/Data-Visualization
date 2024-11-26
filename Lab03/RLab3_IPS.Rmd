@@ -186,7 +186,7 @@ angle <- (angle + 360) %% 360
 # Round to the 6th decimal place
 angle <- round(angle, digits = 2)
 
-IPS_angle <- data.frame(append(IPS_angle, list(angle = angle), after = 7))
+IPS_angle <- data.frame(append(IPS_angle, list(angle = angle), after = 3))
 IPS_angle
 
 ```
