@@ -111,8 +111,8 @@ tail(IPS_sampledata_orientation)
 # rename the Macs column to match the data set
 colnames(mac_locs)[colnames(mac_locs) == "Macs"] <- "mac"
 # use inner join to find the matched data
-IPS_sampledata_joined <- IPS_sampledata %>% inner_join(mac_locs, by = c("mac"))
-IPS_sampledata_joined
+IPS_sampledata_joined <- IPS_sampledata_orientation %>% inner_join(mac_locs, by = c("mac"))
+head(IPS_sampledata_joined)
 ```
 
 
@@ -129,10 +129,10 @@ unique_combinations <- IPS_sampledata  %>% distinct(posX, posY)
 combined_cordinates <- bind_rows(
   unique_combinations %>% rename(X = posX, Y = posY),  
   mac_locs %>% rename(X = x, Y = y)) %>% select(X,Y)  
-combined_cordinates
 
 combined_cordinates_with_groups <- combined_cordinates %>%
   mutate(coordinates_of = ifelse(row_number() > 15, "Access_Points", "Locations"))
+combined_cordinates_with_groups
 
 ggplot(combined_cordinates_with_groups, aes(x = X, y = Y , color = coordinates_of)) +
   geom_point() +
@@ -143,9 +143,19 @@ ggplot(combined_cordinates_with_groups, aes(x = X, y = Y , color = coordinates_o
 2. Use the resulting data set from exercise 4 from the *"Preparing the Data"* section, `group` and `summarize` it in the appropriate way to obtain the median, mean, standard deviation and any other summary statistic you consider useful to assess the signal strength for each combination of:  location, orientation (the binned version), and access point.
 
 ```{r summary_by_combo}
-# your code here
 
-
+IPS_summary <- IPS_sampledata_joined %>%
+  group_by(posX, posY, rec_orient, mac,x,y) %>%
+  summarise(mean_signal = mean(signal, na.rm = TRUE),
+    median_signal = median(signal, na.rm = TRUE),
+    sd_signal = sd(signal, na.rm = TRUE),
+    min_signal = min(signal, na.rm = TRUE),
+    max_signal = max(signal, na.rm = TRUE),
+    IQR_signal = IQR(signal, na.rm = TRUE),
+    count = n(),
+    .groups = "drop"  # Removes grouping from the resulting data frame
+  )
+print(IPS_summary,n = 50, width = Inf)
 ```
 
 
@@ -153,7 +163,31 @@ ggplot(combined_cordinates_with_groups, aes(x = X, y = Y , color = coordinates_o
 
 ```{r cool_dat_vis}
 # your code here
+IPS_dist<-IPS_summary
+dist <- sqrt((IPS_dist$posX - IPS_dist$x)^2 + (IPS_dist$posY - IPS_dist$y)^2)
+dist <- round(dist, digits = 2)
+IPS_dist <- data.frame(append(IPS_dist, list(dist = dist), after = 6))
+head(IPS_dist)
+```
 
+
+```{r cool_dat_vis}
+IPS_angle<-IPS_dist
+
+# Calculate the angle in radians from device to router
+angle <- atan2(IPS_angle$y - IPS_angle$posY, IPS_angle$x - IPS_angle$posX)
+
+# If desired, convert the angle to degrees
+angle <- angle * (180 / pi)
+
+# Adjust to ensure all angles are in the range 0-359 degrees
+angle <- (angle + 360) %% 360
+
+# Round to the 6th decimal place
+angle <- round(angle, digits = 2)
+
+IPS_angle <- data.frame(append(IPS_angle, list(angle = angle), after = 7))
+IPS_angle
 
 ```
 
