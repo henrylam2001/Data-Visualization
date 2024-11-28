@@ -170,7 +170,6 @@ IPS_dist <- data.frame(append(IPS_dist, list(dist = dist), after = 6))
 head(IPS_dist)
 ```
 
-
 ```{r cool_dat_vis}
 IPS_angle<-IPS_dist
 
@@ -187,15 +186,113 @@ angle <- (angle + 360) %% 360
 angle <- round(angle, digits = 2)
 
 IPS_angle <- data.frame(append(IPS_angle, list(angle = angle), after = 3))
-IPS_angle
+head(IPS_angle,48)
 
+```
+
+```{r}
+result1 <- IPS_angle %>%
+  group_by(posX, posY, mac) %>%
+  # Step 2: Calculate the angular difference, considering the circular nature
+  mutate(
+    angle_diff = abs(rec_orient - angle),
+    # Correct for values greater than 180 degrees by subtracting from 360
+    angle_diff = ifelse(angle_diff > 180, 360 - angle_diff, angle_diff)) %>% 
+  select(
+    1:4,           # select the first 4 columns to be the first
+    angle_diff,    # moves angle_diff to the 5th column spot      
+    everything()   # Then adds the rest of the columns in order
+  )
+print(result1, n = 10)
+
+# Checks to make sure there are no angle differences above or below zero, or NA values 
+unique_angle_diff<-unique(result1$angle_diff)
+# Logical condition for values below 0, above 180, or NA
+invalid_cases <- unique_angle_diff < 0 | unique_angle_diff > 180 | is.na(unique_angle_diff)
+# Extract the problematic values
+problem_values <- unique_angle_diff[invalid_cases]
+print(problem_values)
+```
+
+
+```{r}
+result2 <- result1 %>% summarise(
+    angle_diff = min(angle_diff),  # Find the minimum value for the angle difference
+    .groups = "drop"  # grouping is not necessary at this point
+  )
+print(result2)
+```
+
+```{r}
+result3<- result1 %>% semi_join(result2)
+print(result3)
+```
+
+```{r}
+IPS_angle_catagory <- result1 %>%
+  mutate(angle_catagory = case_when(
+    angle_diff >= 150 & angle_diff <= 180 ~ "Very weak", 
+    angle_diff >= 120 & angle_diff < 150 ~ "Weak",
+    angle_diff >= 90 & angle_diff < 120 ~ "Poor",
+    angle_diff >= 60 & angle_diff < 90 ~ "Mild",
+    angle_diff >= 30 & angle_diff < 60 ~ "Strong",
+    angle_diff >= 0 & angle_diff < 30 ~ "Very Strong"
+  )) %>% 
+  select(
+    1:5,           # select the first 4 columns to be the first
+    angle_catagory,    # moves angle_diff to the 5th column spot      
+    everything()   # Then adds the rest of the columns in order
+  )
+head(IPS_angle_catagory)
+```
+
+```{r}
+ggplot(result3, aes(x = dist, y = mean_signal)) +
+  geom_point() +
+  facet_wrap(.~mac) +
+  geom_smooth()
+```
+```{r}
+ggplot(result1, aes(x = dist, y = mean_signal, color = angle_diff)) +
+  geom_point() +
+  facet_wrap(.~mac) +
+  geom_smooth()
+```
+```{r}
+# This graph sees if having the device measure while pointing to the router improve the signal strength
+ggplot(IPS_angle_catagory, aes(x = dist, y = mean_signal)) +
+  geom_point() +
+  facet_grid(angle_catagory~mac) +
+  geom_smooth()
+```
+
+
+
+
+```{r}
+typeof(combined_cordinates_with_groups) # Identifies the type/structure we will be working with
+
+data4_use1<-combined_cordinates_with_groups # Copy the structure and data
+
+data4_use1<- data4_use1[c(2,17,19,20), ]  # Subset rows 2,17,19, and 20
+
+ggplot(data4_use1, aes(x = X, y = Y , color = coordinates_of)) +
+  geom_point() +
+  
+  scale_color_manual(values = c("Locations" = "black", "Access_Points" = "red")) + 
+  scale_x_continuous(limits = c(0, 35)) +
+  scale_y_continuous(limits = c(-3, 15))
+
+filtered_data <- IPS_angle %>%
+  slice(c(5,18,40)) %>% select(posX,posY,rec_orient,angle,x,y,dist,mean_signal)
+print(filtered_data)
 ```
 
 
 4. Replicate the plot attached in the link.
 
 ```{r rep_figure}
-xfun::embed_file("SignalByLocation.pdf")
+#xfun::embed_file("SignalByLocation.pdf")
 ```
 
 
