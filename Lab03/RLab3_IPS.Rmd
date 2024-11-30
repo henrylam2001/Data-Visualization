@@ -192,7 +192,7 @@ head(IPS_angle,48)
 
 ```{r}
 result1 <- IPS_angle %>%
-  group_by(posX, posY, mac) %>%
+  group_by(posX, posY, mac, rec_orient) %>%
   # Step 2: Calculate the angular difference, considering the circular nature
   mutate(
     angle_diff = abs(rec_orient - angle),
@@ -203,7 +203,7 @@ result1 <- IPS_angle %>%
     angle_diff,    # moves angle_diff to the 5th column spot      
     everything()   # Then adds the rest of the columns in order
   )
-print(result1, n = 10)
+print(result1, n = 30)
 
 # Checks to make sure there are no angle differences below zero or above 180, or NA values 
 unique_angle_diff<-unique(result1$angle_diff)
@@ -216,7 +216,7 @@ print(problem_values)
 
 
 ```{r}
-result2 <- result1 %>% summarise(
+result2 <- result1 %>% group_by(posX,posY,mac) %>% summarise(
     angle_diff = min(angle_diff),  # Find the minimum value for the angle difference
     .groups = "drop"  # grouping is not necessary at this point
   )
@@ -226,24 +226,6 @@ print(result2)
 ```{r}
 result3<- result1 %>% semi_join(result2)
 print(result3)
-```
-
-```{r}
-IPS_angle_catagory <- result1 %>%
-  mutate(angle_catagory = case_when(
-    angle_diff >= 150 & angle_diff <= 180 ~ "Very Cold", 
-    angle_diff >= 120 & angle_diff < 150 ~ "Cold",
-    angle_diff >= 90 & angle_diff < 120 ~ "Cool",
-    angle_diff >= 60 & angle_diff < 90 ~ "Warm",
-    angle_diff >= 30 & angle_diff < 60 ~ "Hot",
-    angle_diff >= 0 & angle_diff < 30 ~ "Very Hot"
-  )) %>% 
-  select(
-    1:5,           # select the first 4 columns to be the first
-    angle_catagory,    # moves angle_diff to the 5th column spot      
-    everything()   # Then adds the rest of the columns in order
-  )
-head(IPS_angle_catagory)
 ```
 
 ```{r}
@@ -258,51 +240,6 @@ ggplot(result1, aes(x = dist, y = mean_signal, color = angle_diff)) +
   facet_wrap(.~mac) +
   geom_smooth()
 ```
-```{r}
-# This graph sees if having the device measure while pointing to the router improve the signal strength
-ggplot(IPS_angle_catagory, aes(x = dist, y = mean_signal)) +
-  geom_point() +
-  facet_grid(angle_catagory~mac) +
-  geom_smooth()
-```
-
-```{r}
-
-IPS_angle_prove <- IPS_angle_catagory %>% 
-  group_by(angle_catagory, mac) %>% 
-  summarise(average_signal = mean(mean_signal, na.rm = TRUE),
-    median_signal = median(mean_signal, na.rm = TRUE),
-    sd_signal = sd(mean_signal, na.rm = TRUE),
-    min_signal = min(mean_signal, na.rm = TRUE),
-    max_signal = max(mean_signal, na.rm = TRUE),
-    IQR_signal = IQR(mean_signal, na.rm = TRUE),
-    count = n(),
-    .groups = "drop"  
-  ) %>% 
-  arrange(mac, desc(average_signal)) 
-
-print(IPS_angle_prove, n = 36, quote = FALSE)
-
-```
-```{r}
-install.packages("Rtools")
-install.packages("forcats")
-library(Rtools)
-library(forcats)
-
-IPS_angle_prove$angle_catagory <- fct_relevel(
-  #IPS_angle_prove$angle_catagory,
-  #"Very Cold","Cold","Cool","Warm","Hot","Very Hot")  # Desired order
-
-ggplot(data = IPS_angle_prove, aes(x = angle_catagory, y = average_signal)) +
-    geom_boxplot(alpha = 0) +
-    geom_jitter(alpha = 0.5, width = 0.2, height = 0.2, color = "tomato")
-```
-
-
-
-
-
 ```{r}
 typeof(combined_cordinates_with_groups) # Identifies the type/structure we will be working with
 
