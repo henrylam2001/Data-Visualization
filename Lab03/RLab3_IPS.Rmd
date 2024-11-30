@@ -205,7 +205,7 @@ result1 <- IPS_angle %>%
   )
 print(result1, n = 10)
 
-# Checks to make sure there are no angle differences above or below zero, or NA values 
+# Checks to make sure there are no angle differences below zero or above 180, or NA values 
 unique_angle_diff<-unique(result1$angle_diff)
 # Logical condition for values below 0, above 180, or NA
 invalid_cases <- unique_angle_diff < 0 | unique_angle_diff > 180 | is.na(unique_angle_diff)
@@ -231,12 +231,12 @@ print(result3)
 ```{r}
 IPS_angle_catagory <- result1 %>%
   mutate(angle_catagory = case_when(
-    angle_diff >= 150 & angle_diff <= 180 ~ "Very weak", 
-    angle_diff >= 120 & angle_diff < 150 ~ "Weak",
-    angle_diff >= 90 & angle_diff < 120 ~ "Poor",
-    angle_diff >= 60 & angle_diff < 90 ~ "Mild",
-    angle_diff >= 30 & angle_diff < 60 ~ "Strong",
-    angle_diff >= 0 & angle_diff < 30 ~ "Very Strong"
+    angle_diff >= 150 & angle_diff <= 180 ~ "Very Cold", 
+    angle_diff >= 120 & angle_diff < 150 ~ "Cold",
+    angle_diff >= 90 & angle_diff < 120 ~ "Cool",
+    angle_diff >= 60 & angle_diff < 90 ~ "Warm",
+    angle_diff >= 30 & angle_diff < 60 ~ "Hot",
+    angle_diff >= 0 & angle_diff < 30 ~ "Very Hot"
   )) %>% 
   select(
     1:5,           # select the first 4 columns to be the first
@@ -266,6 +266,40 @@ ggplot(IPS_angle_catagory, aes(x = dist, y = mean_signal)) +
   geom_smooth()
 ```
 
+```{r}
+
+IPS_angle_prove <- IPS_angle_catagory %>% 
+  group_by(angle_catagory, mac) %>% 
+  summarise(average_signal = mean(mean_signal, na.rm = TRUE),
+    median_signal = median(mean_signal, na.rm = TRUE),
+    sd_signal = sd(mean_signal, na.rm = TRUE),
+    min_signal = min(mean_signal, na.rm = TRUE),
+    max_signal = max(mean_signal, na.rm = TRUE),
+    IQR_signal = IQR(mean_signal, na.rm = TRUE),
+    count = n(),
+    .groups = "drop"  
+  ) %>% 
+  arrange(mac, desc(average_signal)) 
+
+print(IPS_angle_prove, n = 36, quote = FALSE)
+
+```
+```{r}
+install.packages("Rtools")
+install.packages("forcats")
+library(Rtools)
+library(forcats)
+
+IPS_angle_prove$angle_catagory <- fct_relevel(
+  #IPS_angle_prove$angle_catagory,
+  #"Very Cold","Cold","Cool","Warm","Hot","Very Hot")  # Desired order
+
+ggplot(data = IPS_angle_prove, aes(x = angle_catagory, y = average_signal)) +
+    geom_boxplot(alpha = 0) +
+    geom_jitter(alpha = 0.5, width = 0.2, height = 0.2, color = "tomato")
+```
+
+
 
 
 
@@ -282,10 +316,20 @@ ggplot(data4_use1, aes(x = X, y = Y , color = coordinates_of)) +
   scale_color_manual(values = c("Locations" = "black", "Access_Points" = "red")) + 
   scale_x_continuous(limits = c(0, 35)) +
   scale_y_continuous(limits = c(-3, 15))
+```
+```{r}
 
-filtered_data <- IPS_angle %>%
-  slice(c(5,18,40)) %>% select(posX,posY,rec_orient,angle,x,y,dist,mean_signal)
-print(filtered_data)
+IPS_position_coordinates2 <- result1 %>%
+  mutate(pos_coord = paste0("(",posX,",",posY,")")) %>% 
+  select(
+    1:2,           # select the first 2 columns to be the first
+    pos_coord,    # moves pos_coord to the 3rd column spot     
+    everything()   # Then adds the rest of the columns in order
+  )
+
+ggplot(IPS_position_coordinates2, aes(x = angle_diff, y = mean_signal)) +
+  geom_point() +
+  facet_grid(mac~pos_coord)
 ```
 
 
@@ -293,8 +337,24 @@ print(filtered_data)
 
 ```{r rep_figure}
 #xfun::embed_file("SignalByLocation.pdf")
+IPS_position_coordinates <- IPS_sampledata_joined %>%
+  mutate(pos_coord = paste0("(",posX,",",posY,")")) %>% 
+  select(
+    1:2,           # select the first 2 columns to be the first
+    pos_coord,    # moves pos_coord to the 3rd column spot     
+    everything()   # Then adds the rest of the columns in order
+  )
+
+print(IPS_position_coordinates, n = 36, quote = FALSE)
+
+ggplot(IPS_position_coordinates, aes(x = pos_coord, y = signal, color = pos_coord)) +
+  geom_point() +
+  geom_boxplot() +
+  facet_grid(mac~rec_orient) +
+  labs(
+    title = "Signal Strength by Location\n (by access point/orientation combination)",
+    x = "location coordinates",
+    y = "signal",
+  ) +
+  theme(axis.text.x = element_text(angle = 90))# Set angle to 90 degrees (Vertical)
 ```
-
-
-
-
