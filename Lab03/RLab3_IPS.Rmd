@@ -79,7 +79,7 @@ IPS_sampledata_change_time
 2. From `IPS_sampledata`, keep only records for the six access points included in the `mac_locs` table, save these to `IPS_sampledata`.
 
 ```{r filter_by_macs}
-#etwd("C:/Users/risin/OneDrive/Desktop/School/Classes/STAT410/Git Repos/Codinglab/Codinglab/Codinglab/Codinglab/Indoor-Positioning-System/Data-Visualization/Data-Visualization/Data-Visualization/Lab03")
+#setwd("C:/Users/risin/OneDrive/Desktop/School/Classes/STAT410/Git Repos/Codinglab/Codinglab/Codinglab/Codinglab/Indoor-Positioning-System/Data-Visualization/Data-Visualization/Data-Visualization/Lab03")
 mac_locs <- readr::read_table("accessPointLocations.txt")
 
 MAC_addresses<-c(mac_locs$Macs)
@@ -132,7 +132,7 @@ combined_cordinates <- bind_rows(
 
 combined_cordinates_with_groups <- combined_cordinates %>%
   mutate(coordinates_of = ifelse(row_number() > 15, "Access_Points", "Locations"))
-combined_cordinates_with_groups
+head(combined_cordinates_with_groups,n=21)
 
 ggplot(combined_cordinates_with_groups, aes(x = X, y = Y , color = coordinates_of)) +
   geom_point() +
@@ -161,20 +161,6 @@ print(IPS_summary,n = 50, width = Inf)
 
 
 3. Using the data generated from the exercise above, produce one or more visualizations (at most 3) to explore the relationship between  orientation angle, location (relative to the access point), and signal strength, using `ggplot2` tools discussed in class. Briefly comment on the relationships you observe in your visualization(s) between orientation angle, distance between locations and access points, and signal strength. From your visualization(s), what cardinal direction can you relate the 0 degree orientation with?
-```{r}
-typeof(combined_cordinates_with_groups) # Identifies the type/structure we will be working with
-
-data4_use1<-combined_cordinates_with_groups # Copy the structure and data
-
-data4_use1<- data4_use1[c(2,17,19,20), ]  # Subset rows 2,17,19, and 20
-
-ggplot(data4_use1, aes(x = X, y = Y , color = coordinates_of)) +
-  geom_point() +
-  
-  scale_color_manual(values = c("Locations" = "black", "Access_Points" = "red")) + 
-  scale_x_continuous(limits = c(0, 35)) +
-  scale_y_continuous(limits = c(-3, 15))
-```
 
 ```{r cool_dat_vis}
 # your code here
@@ -227,6 +213,30 @@ invalid_cases <- unique_angle_diff < 0 | unique_angle_diff > 180 | is.na(unique_
 # Extract the problematic values
 problem_values <- unique_angle_diff[invalid_cases]
 print(problem_values)
+```
+
+
+```{r}
+typeof(combined_cordinates_with_groups) # Identifies the type/structure we will be working with
+
+data4_use1<-combined_cordinates_with_groups # Copy the structure and data
+
+data4_use1<- data4_use1[c(2,17,19,20), ]  # Subset rows 2,17,19, and 20
+
+ggplot(data4_use1, aes(x = X, y = Y , color = coordinates_of)) +
+  geom_point() +
+  
+  scale_color_manual(values = c("Locations" = "black", "Access_Points" = "red")) + 
+  scale_x_continuous(limits = c(0, 35)) +
+  scale_y_continuous(limits = c(-3, 15))
+```
+
+
+```{r}
+filtered_data <- result1 %>% 
+  ungroup() %>%  # Remove grouping
+  slice(c(5,18,40)) %>% select(posX,posY,rec_orient,angle,angle_diff,mac,x,y,dist,mean_signal)
+print(filtered_data)
 ```
 
 
