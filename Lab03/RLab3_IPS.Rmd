@@ -31,7 +31,7 @@ write.csv(IPS_sampledata,"IPS_sampledata")
 
 ```{r}
 #install packages
-install.packages("dplyr")
+#install.packages("dplyr")
 library(dplyr)
 library(magrittr)
 ```
@@ -93,15 +93,21 @@ IPS_sampledata_mac
 ```{r bin_orientation}
 # This function takes and an angle and locates its closest proximity to angles in the bin vector
 nearest_angle <- function(angle, bins) {
-  bins[which.min(abs(angle %% 360 - bins))]
+  
+  selected_val <- bins[which.min(abs(angle - bins))]
+  if(selected_val != 360){
+    return(selected_val)
+  } else{
+    return(0)
+  }
 }
-bins <- c(0, 45, 90, 135, 180, 225, 270, 315)
+bins <- c(0, 45, 90, 135, 180, 225, 270, 315, 360)
 
 # Applies the nearest_angle function to the orientation column and creates a group version of the orientation variable conformed to angles 0, 45, 90, 135, 180, 225, 270, 315.
-IPS_sampledata_orientation <- IPS_sampledata_mac %>%
-mutate(rec_orient = sapply(orientation, nearest_angle, bins = bins))
+IPS_sampledata_orientation <- IPS_sampledata_mac %>% mutate(rec_orient = sapply(orientation, nearest_angle, bins = bins))
 head(IPS_sampledata_orientation)
 tail(IPS_sampledata_orientation)
+
 ```
 
 
@@ -153,10 +159,18 @@ IPS_summary <- IPS_sampledata_joined %>%
     min_signal = min(signal, na.rm = TRUE),
     max_signal = max(signal, na.rm = TRUE),
     IQR_signal = IQR(signal, na.rm = TRUE),
+    Q1 = quantile(signal, 0.25),           # First quartile
+    Q3 = quantile(signal, 0.75),           # Third quartile
+    IQR_min = Q1 - 1.5 * IQR_signal,             # Lower bound
+    IQR_max = Q3 + 1.5 * IQR_signal,             # Upper bound
+    outliers = sum(signal < IQR_min |     # Count outliers
+                             signal > IQR_max),
     count = n(),
     .groups = "drop"  # Removes grouping from the resulting data frame
-  )
+  ) %>% 
+  select(-min_signal,-max_signal,-IQR_signal,-Q1,-Q3,-IQR_min,-IQR_max)
 print(IPS_summary,n = 50, width = Inf)
+
 ```
 
 
@@ -296,8 +310,8 @@ IPS_position_coordinates <- IPS_sampledata_joined %>%
 
 print(IPS_position_coordinates, n = 36, quote = FALSE)
 
-ggplot(IPS_position_coordinates, aes(x = pos_coord, y = signal, color = pos_coord)) +
-  geom_point() +
+ggplot(IPS_position_coordinates, aes(x = pos_coord, y = signal)) +
+  geom_point(color = "cornflower blue") +
   geom_boxplot() +
   facet_grid(mac~rec_orient) +
   labs(
