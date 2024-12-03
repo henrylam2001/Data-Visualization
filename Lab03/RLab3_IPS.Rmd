@@ -71,7 +71,6 @@ posixct_func<- function(x){
 }
 # Creates a new data frame with with time converted into posixct format
 IPS_sampledata_change_time <-IPS_sampledata %>% mutate(time = posixct_func(time))
-
 IPS_sampledata_change_time
 ```
 
@@ -79,11 +78,16 @@ IPS_sampledata_change_time
 2. From `IPS_sampledata`, keep only records for the six access points included in the `mac_locs` table, save these to `IPS_sampledata`.
 
 ```{r filter_by_macs}
-#setwd("C:/Users/risin/OneDrive/Desktop/School/Classes/STAT410/Git Repos/Codinglab/Codinglab/Codinglab/Codinglab/Indoor-Positioning-System/Data-Visualization/Data-Visualization/Data-Visualization/Lab03")
+# For personal use:
+# setwd("C:/Users/risin/OneDrive/Desktop/School/Classes/STAT410/Git Repos/Codinglab/Codinglab/Codinglab/Codinglab/Indoor-Positioning-System/Data-Visualization/Data-Visualization/Data-Visualization/Lab03")
+
+# Loads the information of the access points and stores it in mac_locs
 mac_locs <- readr::read_table("accessPointLocations.txt")
 
+# Creates a vector with the necessary mac address to use
 MAC_addresses<-c(mac_locs$Macs)
 
+# Filters the IPS data for only relevant mac addresses data
 IPS_sampledata_mac <- IPS_sampledata_change_time %>% filter(mac %in% MAC_addresses)
 IPS_sampledata_mac
 ```
@@ -186,6 +190,7 @@ head(IPS_dist)
 ```
 
 ```{r cool_dat_vis}
+# This code finds the angle between the location (device) and the router (where 0 degrees falls on the x-axis) for each observation and stores the information in a new column called angle
 IPS_angle<-IPS_dist
 
 # Calculate the angle in radians from device to router
@@ -202,10 +207,10 @@ angle <- round(angle, digits = 2)
 
 IPS_angle <- data.frame(append(IPS_angle, list(angle = angle), after = 3))
 head(IPS_angle,48)
-
 ```
 
 ```{r}
+
 result1 <- IPS_angle %>%
   group_by(posX, posY, mac, rec_orient) %>%
   # Step 2: Calculate the angular difference, considering the circular nature
@@ -231,50 +236,60 @@ print(problem_values)
 
 
 ```{r}
+# This chooses 3 routers and one location to graph for analysis
 typeof(combined_cordinates_with_groups) # Identifies the type/structure we will be working with
 
 data4_use1<-combined_cordinates_with_groups # Copy the structure and data
 
 data4_use1<- data4_use1[c(2,17,19,20), ]  # Subset rows 2,17,19, and 20
 
+# Graphs and example of one location and 3 different access points 
 ggplot(data4_use1, aes(x = X, y = Y , color = coordinates_of)) +
   geom_point() +
-  
   scale_color_manual(values = c("Locations" = "black", "Access_Points" = "red")) + 
-  scale_x_continuous(limits = c(0, 35)) +
+  scale_x_continuous(limits = c(0, 35)) + # scales the graph appropriately
   scale_y_continuous(limits = c(-3, 15))
 ```
 
 
 ```{r}
+# Based on the points on the graph above, we look at the instance where the device was pointing very close or exactly towards the router (when angle_diff is at a minimum). This can been observed where angle is very close to rec_orient. Since angle was calculated using Arctan, 0 degrees falls on the x axis and 90 degree falls on the y axis. We can see here that from the location (black dot on the graph) and the point (33.5,9.3) the line between the two points is nearly parallel to the axis and that rec_orient is 0, indicating that rec_orient follows the same default as angle. We can see the same thing between the other routers and the same point. 
 filtered_data <- result1 %>% 
-  ungroup() %>%  # Remove grouping
+  ungroup() %>%  # Removes grouping
+  # Select the best columns to display
   slice(c(5,18,40)) %>% select(posX,posY,rec_orient,angle,angle_diff,mac,x,y,dist,mean_signal)
 print(filtered_data)
 ```
 
 
 ```{r}
+# Find the instances where angle_diff is at it's minimum for each unique router and location
 result2 <- result1 %>% group_by(posX,posY,mac) %>% summarise(
     angle_diff = min(angle_diff),  # Find the minimum value for the angle difference
     .groups = "drop"  # grouping is not necessary at this point
   )
 print(result2)
 ```
-
 ```{r}
+# Creates a new data frame from result1 where only the instances of device pointing towards the router for each unique location and mac address is saved. 
 result3<- result1 %>% semi_join(result2)
 print(result3)
 ```
 
 ```{r}
+# Graphs the filtered data and shows the relationship between distance and signal strength for each access points. 
+# It's not a linear relationship, but note that as the distance increases the signal strength weakens
 ggplot(result3, aes(x = dist, y = mean_signal)) +
   geom_point() +
   facet_wrap(.~mac) +
   geom_smooth()
 ```
 
+
 ```{r}
+# This plots the data that has not been filtered (based on facing the router) to see if the relations between distance and signal strength changes
+# Notice that there is lot more variation in the data, especially from the regression line. While the two graph are not to far off from each other there are some difference. 
+# So the orientation has an impact on the relationship between distandce and signal strength. But I don't know quite what that impact is exactly at this point. 
 ggplot(result1, aes(x = dist, y = mean_signal, color = angle_diff)) +
   geom_point() +
   facet_wrap(.~mac) +
@@ -282,7 +297,7 @@ ggplot(result1, aes(x = dist, y = mean_signal, color = angle_diff)) +
 ```
 
 ```{r}
-
+# Combines the columns posX, and posY into coordinates and adds it as a new column into the data frame 
 IPS_position_coordinates2 <- result1 %>%
   mutate(pos_coord = paste0("(",posX,",",posY,")")) %>% 
   select(
@@ -291,6 +306,9 @@ IPS_position_coordinates2 <- result1 %>%
     everything()   # Then adds the rest of the columns in order
   )
 
+# Creates facets based on location coordinates and mac addresses where the x axes represent the angle difference and the signal strength. 
+# Note that the angle difference shows how much each measurement was at facing the a particular router. The max difference would be 180 degrees (because direction is circular) so there will multiple cases where angle difference is similar (for example 135 and 225 degrees)
+# Based on the data the orientation does impact the recording of the signal. But just because the device was pointing at the router does not increase the signal strength. (Although it may impact the accuracy of the signal). So we need more information. Mable we can look at the map and see where there are obstacles and see how that might be influencing the signal strength 
 ggplot(IPS_position_coordinates2, aes(x = angle_diff, y = mean_signal)) +
   geom_point() +
   facet_grid(mac~pos_coord)
@@ -300,6 +318,8 @@ ggplot(IPS_position_coordinates2, aes(x = angle_diff, y = mean_signal)) +
 
 ```{r rep_figure}
 #xfun::embed_file("SignalByLocation.pdf")
+
+# Combines the columns posX, and posY into coordinates and adds it as a new column into the data frame 
 IPS_position_coordinates <- IPS_sampledata_joined %>%
   mutate(pos_coord = paste0("(",posX,",",posY,")")) %>% 
   select(
@@ -308,8 +328,9 @@ IPS_position_coordinates <- IPS_sampledata_joined %>%
     everything()   # Then adds the rest of the columns in order
   )
 
-print(IPS_position_coordinates, n = 36, quote = FALSE)
+#print(IPS_position_coordinates, n = 36, quote = FALSE)
 
+# Creates separate facets based on orientation and mac addresses where the x axes are the location coordinates and the y axes are the signal strength
 ggplot(IPS_position_coordinates, aes(x = pos_coord, y = signal)) +
   geom_point(color = "cornflower blue") +
   geom_boxplot() +
