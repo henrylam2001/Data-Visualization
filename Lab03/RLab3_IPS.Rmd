@@ -181,7 +181,7 @@ print(IPS_summary,n = 50, width = Inf)
 3. Using the data generated from the exercise above, produce one or more visualizations (at most 3) to explore the relationship between  orientation angle, location (relative to the access point), and signal strength, using `ggplot2` tools discussed in class. Briefly comment on the relationships you observe in your visualization(s) between orientation angle, distance between locations and access points, and signal strength. From your visualization(s), what cardinal direction can you relate the 0 degree orientation with?
 
 ```{r cool_dat_vis}
-# your code here
+# Find the Elucdian distance between the locatin and the router and add the info as a column into the data set
 IPS_dist<-IPS_summary
 dist <- sqrt((IPS_dist$posX - IPS_dist$x)^2 + (IPS_dist$posY - IPS_dist$y)^2)
 dist <- round(dist, digits = 2)
