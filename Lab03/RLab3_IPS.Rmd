@@ -134,16 +134,21 @@ Throughout this section you'll have some freedom to create useful visualizations
 
 ```{r loc_scatter}
 library(ggplot2)
+
+# Find the unique locations
 unique_combinations <- IPS_sampledata  %>% distinct(posX, posY)
 
+# Combines the the rows of the data set with the access point data via x and y coordinates, renaming them.
 combined_cordinates <- bind_rows(
   unique_combinations %>% rename(X = posX, Y = posY),  
   mac_locs %>% rename(X = x, Y = y)) %>% select(X,Y)  
 
+# Creates a separate column that squishes if the coordinates are for the location or the access point 
 combined_cordinates_with_groups <- combined_cordinates %>%
   mutate(coordinates_of = ifelse(row_number() > 15, "Access_Points", "Locations"))
 head(combined_cordinates_with_groups,n=21)
 
+# Plots the coordinates of the locations and access points, giving the points colors based on access point or location 
 ggplot(combined_cordinates_with_groups, aes(x = X, y = Y , color = coordinates_of)) +
   geom_point() +
   scale_color_manual(values = c("Locations" = "black", "Access_Points" = "red"))
@@ -155,13 +160,12 @@ ggplot(combined_cordinates_with_groups, aes(x = X, y = Y , color = coordinates_o
 
 ```{r summary_by_combo}
 
+# Use the resulting data set from exercise 4 to obtain the median, mean, standard deviation and other summary statistic that coule be useful
 IPS_summary <- IPS_sampledata_joined %>%
   group_by(posX, posY, rec_orient, mac,x,y) %>%
   summarise(mean_signal = mean(signal, na.rm = TRUE),
     median_signal = median(signal, na.rm = TRUE),
     sd_signal = sd(signal, na.rm = TRUE),
-    min_signal = min(signal, na.rm = TRUE),
-    max_signal = max(signal, na.rm = TRUE),
     IQR_signal = IQR(signal, na.rm = TRUE),
     Q1 = quantile(signal, 0.25),           # First quartile
     Q3 = quantile(signal, 0.75),           # Third quartile
@@ -172,7 +176,8 @@ IPS_summary <- IPS_sampledata_joined %>%
     count = n(),
     .groups = "drop"  # Removes grouping from the resulting data frame
   ) %>% 
-  select(-min_signal,-max_signal,-IQR_signal,-Q1,-Q3,-IQR_min,-IQR_max)
+  #
+  select(-IQR_signal,-Q1,-Q3,-IQR_min,-IQR_max)
 print(IPS_summary,n = 50, width = Inf)
 
 ```
@@ -181,7 +186,7 @@ print(IPS_summary,n = 50, width = Inf)
 3. Using the data generated from the exercise above, produce one or more visualizations (at most 3) to explore the relationship between  orientation angle, location (relative to the access point), and signal strength, using `ggplot2` tools discussed in class. Briefly comment on the relationships you observe in your visualization(s) between orientation angle, distance between locations and access points, and signal strength. From your visualization(s), what cardinal direction can you relate the 0 degree orientation with?
 
 ```{r cool_dat_vis}
-# Find the Elucdian distance between the locatin and the router and add the info as a column into the data set
+# Find the Elucdian distance between the location and the router and add the info as a column into the data set
 IPS_dist<-IPS_summary
 dist <- sqrt((IPS_dist$posX - IPS_dist$x)^2 + (IPS_dist$posY - IPS_dist$y)^2)
 dist <- round(dist, digits = 2)
@@ -205,12 +210,13 @@ angle <- (angle + 360) %% 360
 # Round to the 6th decimal place
 angle <- round(angle, digits = 2)
 
+# appends the vector to the IPS_data frame
 IPS_angle <- data.frame(append(IPS_angle, list(angle = angle), after = 3))
 head(IPS_angle,48)
 ```
 
 ```{r}
-
+# This calculate the difference (from 0 to 180 degrees) between the angle of the location to the router to the orientation which the measurement was taken at. (essentially was the orientation of the device facing a particular router or not?)
 result1 <- IPS_angle %>%
   group_by(posX, posY, mac, rec_orient) %>%
   # Step 2: Calculate the angular difference, considering the circular nature
@@ -263,7 +269,7 @@ print(filtered_data)
 
 
 ```{r}
-# Find the instances where angle_diff is at it's minimum for each unique router and location
+# Find the instances where angle_diff is at it's minimum for each unique router and location (meaning for each location and router when was the device pointing closest to the router?)
 result2 <- result1 %>% group_by(posX,posY,mac) %>% summarise(
     angle_diff = min(angle_diff),  # Find the minimum value for the angle difference
     .groups = "drop"  # grouping is not necessary at this point
